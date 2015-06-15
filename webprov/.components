@@ -1,0 +1,9 @@
+---
+:orm: none
+:test: none
+:mock: none
+:script: jquery
+:renderer: slim
+:stylesheet: sass
+:namespace: Webprov
+:migration_format: number

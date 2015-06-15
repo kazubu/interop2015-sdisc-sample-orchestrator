@@ -1,0 +1,11 @@
+module Consts
+  HOSTNAME = "nsxmanager.localdomain.local"
+  PORT = 443
+  USER = "admin"
+  PASS = "Juniper123Junos"
+  VDNSCOPE="vdnscope-1"
+   
+  QFX_HOSTNAME = "192.168.10.254"
+  QFX_USER = "root"
+  QFX_PASS = "Juniper"
+end

@@ -1,0 +1,301 @@
+doctype html
+html
+
+  head
+    title Juniper Networks Sample Orchestrator
+    meta charset="UTF-8"
+    meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    script type="text/javascript" src="vendors/angularjs/1.2.16/angular.min.js"
+    script type="text/javascript" src="vendors/angular-ui-bootstrap/0.12.1/ui-bootstrap-tpls.min.js"
+    link rel="stylesheet" href="vendors/bootstrap/3.1.1/css/bootstrap.min.css"
+    script type="text/javascript" src="javascripts/app.js"
+    script type="text/javascript" src="javascripts/controllers.js"
+    script type="text/javascript" src="javascripts/service/VirtualNetworks.js"
+    script type="text/javascript" src="javascripts/service/Vlans.js"
+    script type="text/javascript" src="javascripts/service/Interfaces.js"
+    script type="text/javascript" src="javascripts/services.js"
+    style type="text/css"
+      | body {
+          positive: relative;
+          min-height: 100%;
+          background-color: #efefef;
+          background-repeat: no-repeat;
+          background-position: center 95%;
+          background-size: auto 40%;
+          background-attachment: fixed;
+        }
+        footer {
+          bottom: 0;
+          width: 100%;
+          height: 25px;
+        }
+        dd {
+          margin-left: 30px;
+        }
+
+  body ng-app="provModule" ng-controller="pageController"
+
+    / Header
+    header class="container"
+      div class="row" style="height:50px;"
+        div class="col-sm-2"
+        div class="col-sm-8"
+          font face="Antenna" size="2"
+            p align="center"
+              a href="" ng-click="changePage('vnlist')"
+                | VMware NSX for vSphere / QFX5100 VXLAN Integration <br /> Sample Orchestrator
+        div class="col-sm-2" style="height:100%;"
+          a href="//www.juniper.net"
+            img src="./images/juniper_logo.png" align="right" style="height:100%;"
+
+    / Menu
+    nav class="container"
+      div class="btn-toolbar" role="toolbar"
+        a class="btn btn-default" ng-click="changePage('vnlist')" Virtual Network
+        a class="btn btn-default" ng-click="changePage('vlanlist')" VLAN
+        a class="btn btn-default" ng-click="changePage('iflist')" Interfaces
+
+    / Message Bar
+    div class="container"
+      div ng-show="message.show"
+        div class="alert" role="alert" ng-class="message.type"
+          span
+            | {{message.text}}
+
+    / Progress Window
+    script type="text/ng-template" id="progress"
+      div class="modal-header"
+        h3 class="modal-title" In progress...
+      div class="modal-body"
+        div class="progress progress-striped active" style="margin-bottom:0;"
+          div class="progress-bar" style="width: 100%"
+      div class="modal-footer"
+
+    / Modal Window
+    script type="text/ng-template" id="modal"
+      div class="modal-header"
+        h3 class="modal-title"
+          | {{modalMessage.title}}
+      div class="modal-body"
+        p 
+          | {{modalMessage.text}}
+      div class="modal-footer"
+        div ng-if="modalMessage.yesno"
+          button class="btn btn-primary" ng-click="ok()" OK!
+          button class="btn btn-warning" ng-click="cancel()" Cancel
+        div ng-if="!modalMessage.yesno"
+          button class="btn btn-primary" ng-click="ok()" OK
+
+
+    / Virtual Network List
+    div class="container" ng-show="show.vnlist"
+      div ng-controller="virtualNetworkListController"
+        div class="list-group"
+          a class="list-group-item" ng-repeat="vn in vns" ng-click="show(vn)"
+            div
+              h4 class="list-group-item-heading" {{vn.network_name}}
+              p class="list-group-item-text" VNID: {{vn.vn_id}}
+              p class="list-group-item-text" Multicast Adress: {{vn.vn_mcaddr}}
+              p class="list-group-item-text" ng-show="vn.vlan" VLAN : {{vn.vlan.name}}({{vn.vlan['vlan-id']}})
+        div
+          a class="btn btn-success btn-block" ng-click="changePage('vnadd')" New Virtual Network
+
+    / VN Add
+    div class="container" ng-show="show.vnadd"
+      form role="form" name="addItemForm" ng-controller="vnAddController"
+        div ng-show="!addItemForm.$valid"
+          div class="alert alert-warning" role="alert" The your input is not meet our criteria.
+        div class="panel panel-default"
+          div class="panel-heading"
+            | {{item.network_name}}
+          div class="panel-body"
+            div class="form-group"
+              label Virtual Network Name
+              input type="text" class="form-control" placeholder="network name" required="" ng-model="item.network_name"
+            div class="checkbox"
+              input type="checkbox" ng-model="item.hw_vtep" ng-click="item.hw_vtep_exist_vlan = false"
+                | Using Hardware VTEP
+            div class="form-group well" ng-if="item.hw_vtep" 
+              div class="btn-group"
+                label class="btn btn-primary" ng-model="item.hw_vtep_exist_vlan" btn-radio="false" Create a new VLAN
+                label class="btn btn-primary" ng-model="item.hw_vtep_exist_vlan" btn-radio="true" ng-click="item.vlan = null; getSelectableVlans()" Using a exist VLAN
+              div class="form-group" ng-if="item.hw_vtep_exist_vlan"
+                div class="btn-group" dropdown=""
+                  button class="btn btn-default dropdown-toggle" dropdown-toggle=""
+                    | {{item.vlan.name || 'Select VLAN'}}
+                    span class="caret"
+                  ul class="dropdown-menu"
+                    li ng-repeat="vlan in selectable_vlans" 
+                      a href="#" ng-click="setVlan(vlan)" {{vlan.name}}
+                div ng-if="item.vlan"
+                  dl
+                    dt
+                      | VLAN NAME:
+                    dd
+                      | {{item.vlan.name}}
+                    dt
+                      | VLAN ID:
+                    dd
+                      | {{item.vlan['vlan-id']}}
+
+              div class="form-group" ng-if="!item.hw_vtep_exist_vlan"
+                label VLAN Name(*)
+                input type="text" class="form-control" placeholder="VLAN Name" required="" ng-model="item.vlan.name" ng-maxlength="32"
+                label VLAN ID(*)
+                input type="text" class="form-control" placeholder="VLAN ID" required="" ng-model="item.vlan['vlan-id']" ng-maxlength="4" ng-pattern="/^[0-4]?\d?\d?\d$/"
+
+            div class="form-group"
+              label Description
+              input type="text" class="form-control" placeholder="Description" ng-model="item.network_descr"
+
+          div class="panel-footer"
+            button type="button" class="btn btn-primary btn-block" ng-click="addItem()" Create
+            button type="button" class="btn btn-warning btn-block" ng-click="item = {}; changePage('vnlist')" Cancel
+
+    / VN Info
+    div class="container" ng-show="show.vninfo"
+      div class="panel panel-default"
+        div class="panel-heading"
+          div class="panel-title"
+            | {{active.network_name}}
+        div class="panel-body"
+          dl
+            dt
+              | virtualWire ID
+            dd
+              | {{active.vw_id}}
+            dt
+              | vdnScope
+            dd
+              | {{active.vdn_scope}}
+            dt
+              | VNID
+            dd
+              | {{active.vn_id}}
+            dt
+              | Multicast Address
+            dd
+              | {{active.vn_mcaddr}}
+            dt
+              | Connected VLAN
+            dd
+              | {{active.vlan.name}}({{active.vlan['vlan-id']}})
+            dt
+              | Description
+            dd
+              | {{active.network_descr}}
+        div class="panel-footer"
+          button class="btn btn-warning btn-block" ng-click="deleteVirtualNetwork(active)" Delete
+
+    / VLAN List
+    div class="container" ng-show="show.vlanlist"
+      div ng-controller="vlanListController"
+        div class="list-group"
+          a  class="list-group-item" ng-repeat="vlan in vlans" ng-click="show(vlan)"
+            div
+              h4 class="list-group-item-heading" {{vlan.name}}
+              p class="list-group-item-text" VLAN ID: {{vlan['vlan-id']}}
+              p class="list-group-item-text" ng-show="vlan.vn.network_name" Virtual Network: {{vlan.vn.network_name}}
+              p class="list-group-item-text" ng-show="vlan.vxlan" VNID: {{vlan.vxlan.vni}}
+              p class="list-group-item-text" ng-show="vlan.vxlan" Multicast Address: {{vlan.vxlan['multicast-group']}}
+              p class="list-group-item-text" ng-show="vlan['l3-interface']" L3 Interface: {{vlan['l3-interface']}}
+        div
+          a class="btn btn-success btn-block" ng-click="show({new: 'new'})" New VLAN
+
+
+    / VLAN Add
+    div class="container" ng-if="show.vlanadd"
+      form role="form" name="addVlanForm" ng-controller="vlanAddController"
+        div ng-show="!addVlanForm.$valid"
+          div class="alert alert-warning" role="alert" The your input is not meet our criteria.
+        div class="panel panel-default"
+          div class="panel-heading"
+            div class="panel-title"
+              | {{active.name}}
+          div class="panel-body"
+            div class="form-group" ng-show="active.new"
+              label VLAN Name(*)
+              input type="text" class="form-control" placeholder="VLAN Name" required="" ng-model="active.name" ng-maxlength="32"
+            div class="form-group"
+              label VLAN ID(*)
+              input type="text" class="form-control" placeholder="VLAN ID" required="" ng-model="active['vlan-id']" ng-maxlength="4" ng-pattern="/^[0-4]?\d?\d?\d$/"
+            div class="form-group"
+              label Virtual Network
+              <br />
+              div class="btn-group" dropdown=""
+                button class="btn btn-default dropdown-toggle" dropdown-toggle=""
+                  | {{active.vxlan.name || 'Select VLAN'}}
+                  span class="caret"
+                ul class="dropdown-menu"
+                  li ng-repeat="vn in available_vns"
+                    a href="#" ng-click="active.vxlan = vn.vxlan" {{vn.vxlan.name}}
+            div class="form-group"
+              label VXLAN VNID
+              input type="text" class="form-control" placeholder="VXLAN ID" ng-model="active.vxlan.vni" ng-maxlength="8"
+            div class="form-group"
+              label VXLAN Multicast Group
+              input type="text" class="form-control" placeholder="VXLAN Multicast Group" ng-model="active.vxlan['multicast-group']" ng-maxlength="15" ng-pattern="/^[0-2]?\d?\d\.[0-2]?\d?\d\.[0-2]?\d?\d\.[0-2]?\d?\d$/"
+          div class="panel-footer" ng-if="!active['l3-interface']"
+            button class="btn btn-primary btn-block" ng-click="addVlan(active)" Save
+            button class="btn btn-warning btn-block" ng-if="!active.new" ng-click="deleteVlan(active)" Delete
+
+    / Physical Port Configuration
+    div class="container" ng-show="show.iflist"
+      div ng-controller="interfaceListController"
+        div class="list-group"
+          a class="list-group-item" ng-repeat="interface in interfaces" ng-show="interface.unit.family['ethernet-switching']||interface.unit == undefined" ng-click="show(interface)"
+            div
+              h4 class="list-group-item-heading" {{interface.name}}
+              p class="list-group-item-text" ng-show="interface.unit.family['ethernet-switching']['interface-mode']" Interface Type: {{interface.unit.family['ethernet-switching']['interface-mode']}}
+              div class="list-group-item-text" ng-if="interface.unit.family['ethernet-switching'].vlan.members"
+                dl
+                  | VLAN Members:
+                  dd ng-repeat="vlan_name in interface.unit.family['ethernet-switching'].vlan.members"
+                    | {{vlan_name}}
+        div
+        a class="btn btn-success btn-block" ng-click="show({new: 'new', unit: { name: '0', family: { 'ethernet-switching' : {}}}})" New Interface
+
+    div class="container" ng-if="show.ifadd"
+      form role="form" name="addInterfaceForm" ng-controller="interfaceAddController"
+        div ng-show="!addInterfaceForm.$valid"
+          div class="alert alert-warning" role="alert" The your input is not meet our criteria.
+        div class="panel pane-default"
+          div class="panel-heading"
+            div class="panel-title"
+              | {{active.name}}
+            div class="panel-body"
+              div class="form-group" ng-if="active.new"
+                div class="btn-group" dropdown=""
+                  button class="btn btn-default dropdown-toggle" dropdown-toggle=""
+                    | {{active.name || 'Select Interfaces'}}
+                    span class="caret"
+                  ul class="dropdown-menu"
+                    li ng-repeat="intf in free_interfaces"
+                      a href="#" ng-click="active.name = intf" {{intf}}
+
+              div class="form-group"
+                dl
+                  dt
+                    | Interface Mode
+                  dd
+                    div class="btn-group"
+                      label class="btn btn-primary" ng-model="active.unit.family['ethernet-switching']['interface-mode']" btn-radio="'access'" ng-change="checkAccess()" Access
+                      label class="btn btn-primary" ng-model="active.unit.family['ethernet-switching']['interface-mode']" btn-radio="'trunk'" Trunk
+              div class="form-group"
+                dl
+                  dt
+                    | VLAN
+                  dd
+                    div class="btn-group"
+                        label class="btn btn-primary" ng-model="vlan.enabled" ng-repeat="vlan in if_vlans " ng-change="refreshVlan(active.unit.family['ethernet-switching']['interface-mode'] == 'access' ? $index.toString(10) : null)" btn-checkbox="" {{vlan.name}}({{vlan['vlan-id']}})
+
+            div class="panel-footer"
+              button class="btn btn-primary btn-block" ng-click="addInterface(active)" Save
+              button class="btn btn-warning btn-block" ng-if="!active.new" ng-click="deleteInterface(active)" Delete
+              
+
+
+    footer
+      p align="center"
+        | Copyright(c) 2015 Juniper Networks, K.K. All right reserved.
+
