@@ -2,6 +2,9 @@
 
 ## Description
 
+_It is a demo software for Juniper Networks Booth of Interop Tokyo 2015 SDI Showcase._
+_Please do not use this program in production environment._
+
 This program provide a Web GUI for following features:
 
  * Creation a Virtual Network in VMware NSX for vSphere and Configure a VLAN/VXLAN in QFX5100.
